@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generator Sertifikat Otomatis</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
+        }
+        
+        .kontrol-panel {
+            background-color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .kontrol-panel h2 {
+            color: #2c5f5f;
+            margin-top: 0;
+            text-align: center;
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: #ff7a00;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background-color: #2c5f5f;
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #2c5f5f;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        
+        .canvas-container {
+            max-width: 1000px;
+            margin: 20px auto;
+            position: relative;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .canvas-wrapper {
+            position: relative;
+            display: inline-block;
+            max-width: 100%;
+        }
+        
+        #previewCanvas {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .instruksi {
+            background: linear-gradient(#d4edda);
+            color: #2c5f5f;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .instruksi h3 {
+            margin-top: 0;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            color: #ff7a00;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        
+        .input-controls {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .control-buttons {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            text-align: center;
+            display: none;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            text-align: center;
+            display: none;
+        }
+        
+        /* Hidden template image */
+        #templateImage {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Template image - letakkan foto JPG Anda di sini -->
+    <img id="templateImage" src="02_sertif.png" alt="Template Sertifikat">
+    
+    <div class="kontrol-panel">
+        <h2>Sertifikat BKO Otomatis</h2>
+        <p style="text-align: center; color: #666;">Masukkan nama dan langsung download sertifikat!</p>
+        
+        <div class="instruksi">
+            <h3>Cara Penggunaan:</h3>
+            <p>1. Masukkan nama penerima sertifikat → 2. Klik "Buat Sertifikat" → 3. Download langsung!</p>
+        </div>
+        
+        <div class="input-controls">
+            <div class="form-group">
+                <label for="namaInput">Nama Penerima Sertifikat:</label>
+                <input type="text" id="namaInput" placeholder="Masukkan nama lengkap..." value="Admin">
+            </div>
+        </div>
+        
+        <div class="control-buttons">
+            <button class="btn btn-primary" onclick="generateCertificate()" id="generateBtn">📋 Buat Sertifikat</button>
+            <button class="btn btn-secondary" onclick="downloadImage()" id="downloadBtn" style="display: none;">💾 Download Sertifikat</button>
+        </div>
+        
+        <div class="loading" id="loading">⏳ Sedang memproses...</div>
+        <div class="success-message" id="successMessage">✅ Sertifikat berhasil dibuat! Silakan download.</div>
+        <div class="error-message" id="errorMessage">❌ Template tidak ditemukan! Pastikan file template-sertifikat.png ada di folder yang sama.</div>
+    </div>
+    
+    <div class="canvas-container" id="canvasContainer" style="display: none;">
+        <div class="canvas-wrapper">
+            <canvas id="previewCanvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let canvas, ctx;
+        let templateImage = null;
+        let certificateReady = false;
+        
+        // Inisialisasi
+        document.addEventListener('DOMContentLoaded', function() {
+            canvas = document.getElementById('previewCanvas');
+            ctx = canvas.getContext('2d');
+            
+            // Load template image
+            loadTemplateImage();
+            
+            // Update nama otomatis saat template sudah ada
+            document.getElementById('namaInput').addEventListener('input', function() {
+                if (templateImage && certificateReady) {
+                    drawCertificate();
+                }
+            });
+        });
+        
+        function loadTemplateImage() {
+            const img = document.getElementById('templateImage');
+            
+            img.onload = function() {
+                templateImage = img;
+                
+                // Set canvas size
+                const maxWidth = 1000;
+                const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+                
+                canvas.width = img.width * ratio;
+                canvas.height = img.height * ratio;
+                
+                console.log('Template berhasil dimuat!');
+            };
+            
+            img.onerror = function() {
+                console.error('Template tidak ditemukan!');
+                document.getElementById('errorMessage').style.display = 'block';
+            };
+            
+            // Jika gambar sudah ter-cache, trigger onload
+            if (img.complete) {
+                img.onload();
+            }
+        }
+        
+        function generateCertificate() {
+            if (!templateImage) {
+                alert('Template belum dimuat! Pastikan file template-sertifikat.png ada di folder yang sama.');
+                return;
+            }
+            
+            const nama = document.getElementById('namaInput').value.trim();
+            if (!nama) {
+                alert('Silakan masukkan nama penerima sertifikat!');
+                return;
+            }
+            
+            document.getElementById('loading').style.display = 'block';
+            
+            // Draw certificate
+            drawCertificate();
+            
+            // Show results
+            document.getElementById('canvasContainer').style.display = 'block';
+            document.getElementById('downloadBtn').style.display = 'inline-block';
+            document.getElementById('successMessage').style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('loading').style.display = 'none';
+            
+            certificateReady = true;
+            
+            // Scroll to result
+            document.getElementById('canvasContainer').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function drawCertificate() {
+            if (!templateImage) return;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background image
+            ctx.drawImage(templateImage, 0, 0, canvas.width, canvas.height);
+            
+            // Get name
+            const nama = document.getElementById('namaInput').value || 'Nama Penerima';
+            
+            // Auto-detect best position and size for text
+            const fontSize = Math.max(20, Math.min(40, canvas.width / 16)); // sedikit lebih besar
+            
+            // Set font with black color
+            ctx.font = `bold ${fontSize}px Arial`;
+            ctx.fillStyle = '#ff7a00'; 
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Position text below "berikan kepada;" text
+            const textX = canvas.width / 2;
+            const textY = canvas.height * 0.48; // 42% from top
+            
+            // Add text shadow for better visibility
+            ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
+            
+            // Draw text
+            ctx.fillText(nama, textX, textY);
+            
+            // Reset shadow
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+        }
+        
+        function downloadImage() {
+            if (!certificateReady) {
+                alert('Silakan buat sertifikat terlebih dahulu!');
+                return;
+            }
+            
+            document.getElementById('loading').style.display = 'block';
+            
+            // Create high-resolution canvas
+            const downloadCanvas = document.createElement('canvas');
+            const downloadCtx = downloadCanvas.getContext('2d');
+            
+            // Set high resolution (3x scale)
+            const scale = 3;
+            downloadCanvas.width = templateImage.width * scale;
+            downloadCanvas.height = templateImage.height * scale;
+            
+            // Draw background
+            downloadCtx.drawImage(templateImage, 0, 0, downloadCanvas.width, downloadCanvas.height);
+            
+            // Get name
+            const nama = document.getElementById('namaInput').value || 'Nama Penerima';
+            
+            // Scale font size
+            const fontSize = Math.max(48, Math.min(100, downloadCanvas.width / 20)); // menyesuaikan versi resolusi tinggi;
+            
+            // Set font for high-res with black color
+            downloadCtx.font = `bold ${fontSize}px Arial`;
+            downloadCtx.fillStyle = '#ff7a00';
+            downloadCtx.textAlign = 'center';
+            downloadCtx.textBaseline = 'middle';
+            
+            // Position text below "berikan kepada;" text
+            const textX = downloadCanvas.width / 2;
+            const textY = downloadCanvas.height * 0.48; // 42% from top
+            
+            // Add text shadow
+            downloadCtx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+            downloadCtx.shadowBlur = 12;
+            downloadCtx.shadowOffsetX = 6;
+            downloadCtx.shadowOffsetY = 6;
+            
+            // Draw text
+            downloadCtx.fillText(nama, textX, textY);
+            
+            // Download
+            const link = document.createElement('a');
+            const cleanName = nama.replace(/[^a-zA-Z0-9]/g, '_');
+            link.download = `Sertifikat_${cleanName}.png`;
+            link.href = downloadCanvas.toDataURL('image/png', 1.0);
+            link.click();
+            
+            document.getElementById('loading').style.display = 'none';
+            alert('✅ Sertifikat berhasil didownload!');
+        }
+    </script>
+</body>
+</html>
+
